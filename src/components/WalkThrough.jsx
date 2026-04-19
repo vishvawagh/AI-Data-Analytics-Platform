@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -57,18 +57,7 @@ export default function WalkThrough() {
   // Date bounds
   const [dateBounds, setDateBounds] = useState({ min: "", max: "" });
 
-  useEffect(() => {
-    // Get current user
-    API.get("/me").then((res) => {
-      if (!res.data.error) {
-        setUser(res.data);
-        loadOptions(res.data.role);
-      
-      }
-    });
-  }, []);
-
-  const loadProducts = async (categories) => {
+  const loadProducts = useCallback(async (categories) => {
     try {
       const categoryQuery = Array.isArray(categories) ? categories.join(",") : categories;
       const query = categoryQuery ? `?categories=${categoryQuery}` : "";
@@ -77,9 +66,9 @@ export default function WalkThrough() {
     } catch (error) {
       console.error("Error loading products:", error);
     }
-  };
+  }, []);
 
-  const loadOptions = async (role) => {
+  const loadOptions = useCallback(async (role) => {
     try {
       const [citiesRes, countriesRes, categoriesRes] = await Promise.all([
         API.get("/walkthrough/cities"),
@@ -108,9 +97,9 @@ export default function WalkThrough() {
     } catch (error) {
       console.error("Error loading options:", error);
     }
-  };
+  }, [loadProducts, selectedGroupFields, selectedMeasureFields]);
 
-  const loadDateBounds = async () => {
+  const loadDateBounds = useCallback(async () => {
     try {
       const res = await API.get("/walkthrough/date-bounds");
       setDateBounds(res.data);
@@ -120,14 +109,9 @@ export default function WalkThrough() {
     } catch (error) {
       console.error("Error loading date bounds:", error);
     }
-  };
+  }, [selectedDates]);
 
- 
-  useEffect(() => {
-    loadProducts(selectedCategories);
-  }, [selectedCategories]);
-
-  const loadMeasureFields = async (role, aggFunc) => {
+  const loadMeasureFields = useCallback(async (role, aggFunc) => {
     try {
       const fieldsRes = await API.get(`/walkthrough/fields?role=${role}&agg_function=${aggFunc}`);
       const availableMeasures = fieldsRes.data.measure_fields || [];
@@ -138,7 +122,28 @@ export default function WalkThrough() {
     } catch (error) {
       console.error("Error loading measure fields:", error);
     }
-  };
+  }, [selectedMeasureFields]);
+
+  useEffect(() => {
+    // Get current user
+    API.get("/me").then((res) => {
+      if (!res.data.error) {
+        setUser(res.data);
+        loadOptions(res.data.role);
+        loadDateBounds();
+      }
+    });
+  }, [loadOptions, loadDateBounds]);
+
+  useEffect(() => {
+    if (user) {
+      loadMeasureFields(user.role, aggFunction);
+    }
+  }, [user, aggFunction, loadMeasureFields]);
+
+  useEffect(() => {
+    loadProducts(selectedCategories);
+  }, [selectedCategories, loadProducts]);
 
   const handleRunAnalytics = async () => {
     if (!selectedMeasureFields) {
