@@ -63,7 +63,7 @@ export default function WalkThrough() {
       if (!res.data.error) {
         setUser(res.data);
         loadOptions(res.data.role);
-        loadDateBounds();
+      
       }
     });
   }, []);
@@ -122,12 +122,7 @@ export default function WalkThrough() {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      loadMeasureFields(user.role, aggFunction);
-    }
-  }, [user, aggFunction]);
-
+ 
   useEffect(() => {
     loadProducts(selectedCategories);
   }, [selectedCategories]);
